@@ -1,68 +1,92 @@
 import os
+import time
+import random
 
-class InputStream:
-    def __init__(self, filename):
-        self.filename = filename
-        self.isOpen = False
-        self.file_handler = None
-
-    def open(self):
-        if not self.isOpen:
-            self.file_handler = open(self.filename, 'r')
-            self.isOpen = True 
-
-    def read(self):
-        char = self.file_handler.read(1)
-        if char == '':
-            return False
-        return char
-
-    def readline(self):
-        if self.isOpen:
-            line = []
-            char = self.read()
-            while char:
-                line.append(char)
-                char = self.read()
-                if char == '\n':
-                    line.append(char)
-                    break
-            return "".join(line)
-        else:
-            print("Open file handler before reading")
-
-    def seek(self, pos):
-        current_pos = self.file_handler.tell()
-        return self.file_handler.seek(current_pos + pos)
-
-    def end_of_stream(self):
-        if self.read():
-            self.seek(-1)
-            return False
-        return True
-
+from stream import ByteInputStream, BufferedInputStream
         
+def file_length_byte_stream(filename):
+    sum = 0
+    input_stream = ByteInputStream(filename)
+    input_stream.open()
+    print(f"\nByte Stream: {filename}")
+    start_time = time.time()
+    while not input_stream.end_of_stream():
+        sum += len(input_stream.read_line())
+    end_time = time.time()
+    return sum, end_time - start_time
 
-class OutputStream:
-    def  __init__(self):
-        pass
 
-    def create(self):
-        pass
+def file_length_buffered_stream(filename, buffer_size=None):
+    sum = 0
+    input_stream = BufferedInputStream(filename, buffer_size)
+    input_stream.open()
+    print(f"\nBuffered Stream: {filename}\t Buffer Size: {buffer_size}")
+    start_time = time.time()
+    for line in input_stream.read_lines():
+        sum += len(line)
+    end_time = time.time()
+    return sum, end_time - start_time
 
-    def  writeln(self):
-        pass
+def rand_jump_byte_stream(filename, j, buffer_size=None):
+    file_size = os.path.getsize(filename)
+    input_stream = ByteInputStream(filename)
+    input_stream.open()
+    sum = 0
+    start_time = time.time()
+    print(f"\nByte Stream: {filename}\t Jumps: {j}")
+    for i in range(j):
+        p = random.randint(1,file_size)
+        input_stream.seek(p)
+        sum += len(input_stream.read_line())
+    end_time = time.time()
+    return sum, end_time - start_time
 
-    def close(self):
-        pass
-
+def rand_jump_buffered_stream(filename, j, buffer_size=None):
+    file_size = os.path.getsize(filename)
+    input_stream = BufferedInputStream(filename, buffer_size)
+    input_stream.open()
+    sum = 0
+    start_time = time.time()
+    print(f"\nBuffered Stream: {filename}\tJumps: {j}\tBuffer Size: {buffer_size}")
+    for i in range(j):
+        p = random.randint(1,file_size)
+        input_stream.seek(p)
+        sum += len(next(input_stream.read_lines()))
+    end_time = time.time()
+    return sum, end_time - start_time
 
 # TEST CODE
-FILE_NAME = 'imdb/aka_name.csv'
-input_stream = InputStream(FILE_NAME)
-input_stream.open()
-print(input_stream.readline())
-print(input_stream.end_of_stream())
-print(input_stream.seek(2))
-print(input_stream.readline())
-print(input_stream.end_of_stream())
+FILE_NAME = 'data/aka_name.csv'
+# Sequential Reading using Different Read Streams
+print("Exp 1.1: SEQUENTIAL READING...")
+file_sum, time_taken = file_length_byte_stream(FILE_NAME)
+print(f"File Length: {file_sum},\t\tTime {round(time_taken * 1000,4)}ms")
+file_sum, time_taken = file_length_buffered_stream(FILE_NAME)
+print(f"File Length: {file_sum},\t\tTime {round(time_taken * 1000,4)}ms")
+file_sum, time_taken = file_length_buffered_stream(FILE_NAME,buffer_size=5)
+print(f"File Length: {file_sum},\t\tTime {round(time_taken * 1000,4)}ms")
+file_sum, time_taken = file_length_buffered_stream(FILE_NAME,buffer_size=50)
+print(f"File Length: {file_sum},\t\tTime {round(time_taken * 1000,4)}ms")
+file_sum, time_taken = file_length_buffered_stream(FILE_NAME,buffer_size=500)
+print(f"File Length: {file_sum},\t\tTime {round(time_taken * 1000,4)}ms")
+file_sum, time_taken = file_length_buffered_stream(FILE_NAME,buffer_size=5000)
+print(f"File Length: {file_sum},\t\tTime {round(time_taken * 1000,4)}ms")
+
+
+
+# Random Reading using Different Read Streams
+print("\nExp 1.2: RANDOM READING...")
+file_sum, time_taken = rand_jump_byte_stream(FILE_NAME, 10000)
+print(f"File Length: {file_sum},\t\tTime {round(time_taken * 1000,4)}ms")
+file_sum, time_taken = rand_jump_buffered_stream(FILE_NAME, j=10000)
+print(f"File Length: {file_sum},\t\tTime {round(time_taken * 1000,4)}ms")
+file_sum, time_taken = rand_jump_buffered_stream(FILE_NAME,j=10000, buffer_size=5)
+print(f"File Length: {file_sum},\t\tTime {round(time_taken * 1000,4)}ms")
+file_sum, time_taken = rand_jump_buffered_stream(FILE_NAME,j=10000, buffer_size=50)
+print(f"File Length: {file_sum},\t\tTime {round(time_taken * 1000,4)}ms")
+file_sum, time_taken = rand_jump_buffered_stream(FILE_NAME,j=10000, buffer_size=500)
+print(f"File Length: {file_sum},\t\tTime {round(time_taken * 1000,4)}ms")
+file_sum, time_taken = rand_jump_buffered_stream(FILE_NAME,j=10000, buffer_size= 5000)
+print(f"File Length: {file_sum},\t\tTime {round(time_taken * 1000,4)}ms")
+
+
