@@ -56,7 +56,7 @@ def rand_jump_buffered_stream(filename, j, buffer_size=None):
     return sum, end_time - start_time
 
 # TEST CODE
-FILE_NAME = 'data/aka_name.csv'
+FILE_NAME = 'data/company_name.csv'
 # Sequential Reading using Different Read Streams
 print("Exp 1.1: SEQUENTIAL READING...")
 file_sum, time_taken = file_length_byte_stream(FILE_NAME)

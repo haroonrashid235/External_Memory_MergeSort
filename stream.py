@@ -160,19 +160,6 @@ class BufferedInputStream:
             return self.file_handler
 
 
-    def read_byte(self):
-        """ 
-        Reads and returns a single byte from a self.filename file at the current seek position.
-        
-        Returns:
-            raw_byte (bytes): Byte read from the file, return False if no more byte is available.   
-        """
-        raw_byte = self.file_handler.read(1)
-        if raw_byte == b'':
-            return False
-        return raw_byte
-
-
     def read_lines(self):
         """ 
         Reads and yields a line from a self.filename file strating at the current seek position.
@@ -233,14 +220,60 @@ class BufferedInputStream:
 
 
 class OutputStream:
-    def  __init__(self):
-        pass
+    def  __init__(self,filename):
+        self.filename = filename
+        self.file_handler = None
 
     def create(self):
-        pass
+        if os.path.exists(self.filename):
+            self.file_handler = open(self.filename, 'a')
+        else:
+            self.file_handler = open(self.filename, 'w')
+        return self.file_handler
 
-    def  writeln(self):
-        pass
+    def write_line(self, string):
+        for char in string:
+            self.file_handler.write(char)
+        return self.file_handler.write('\n')
 
     def close(self):
-        pass
+        """ 
+        Close the filestream object, raises exception if file is already closed.   
+        """
+        if self.is_open:
+            self.is_open = False
+            self.file_handler.close()
+        else:
+            raise Exception("Cannot close a closed File")
+
+class BufferedOutputStream:
+    def  __init__(self, filename, buffer_size = None):
+        self.filename = filename
+        self.file_handler = None
+        self.buffer_size = buffer_size
+
+    def create(self):
+        if os.path.exists(self.filename):
+            if self.buffer_size is None:
+                self.file_handler = open(self.filename, 'a')
+            else:
+                self.file_handler = open(self.filename, 'a', buffering = self.buffer_size)
+        else:
+            if self.buffer_size is None:
+                self.file_handler = open(self.filename, 'w')
+            else:
+                self.file_handler = open(self.filename, 'w', buffering = self.buffer_size)
+        return self.file_handler
+
+    def write_line(self, string):
+        return self.file_handler.write(string + '\n')
+
+    def close(self):
+        """ 
+        Close the filestream object, raises exception if file is already closed.   
+        """
+        if self.is_open:
+            self.is_open = False
+            self.file_handler.close()
+        else:
+            raise Exception("Cannot close a closed File")
