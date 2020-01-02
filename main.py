@@ -2,7 +2,7 @@ import os
 import time
 import random
 
-from stream import ByteInputStream, BufferedInputStream, BufferedOutputStream
+from stream import ByteInputStream, BufferedInputStream, BufferedOutputStream, MemMappedInputStream, MemMappedOutputStream
         
 def file_length_byte_stream(filename):
     sum = 0
@@ -84,9 +84,8 @@ def rrmerge(files_list, target_file):
 
         if not len(input_streams):
             break
-    print('Merged Files')
-
-
+    output_stream.close()
+    print('Merged Files...')
 
 
 # TEST CODE
@@ -94,11 +93,13 @@ FILE_NAME = 'data/company_name.csv'
 file_names = os.listdir('data')
 
 files_list = [os.path.join('data', x) for x in file_names if '.csv' in x and x[0] != '.']
-print(files_list)
-target_file = 'test.csv'
-rrmerge(files_list, target_file)
-assert False
+# print(files_list)
+# target_file = 'test.csv'
+# rrmerge(files_list, target_file)
+# assert False
 # Sequential Reading using Different Read Streams
+
+
 print("Exp 1.1: SEQUENTIAL READING...")
 file_sum, time_taken = file_length_byte_stream(FILE_NAME)
 print(f"File Length: {file_sum}\t\tTime {round(time_taken * 1000,4)}ms")

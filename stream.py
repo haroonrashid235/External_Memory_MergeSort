@@ -3,6 +3,8 @@ __email__ = "haroon.rashid235@gmail.com"
 
 
 import os
+import mmap
+import sys
 
 class ByteInputStream:
     def __init__(self, filename):
@@ -181,7 +183,6 @@ class BufferedInputStream:
         # return next(self.buffer).decode('utf-8')
 
 
-
     def seek(self, pos, absolute = True):
         """ 
         Seeks or moves the file reading pointer to a pos postion in the file.
@@ -226,6 +227,119 @@ class BufferedInputStream:
             raise Exception("Cannot close a closed File")
 
 
+class MemMappedInputStream:
+    
+    def __init__(self, filename, buffer_size):
+        """ 
+        Creates the BufferedInputStream Object to read file using main memory buffers.
+        
+        Parameters:
+            filename (string): path to the file to read
+            buffer_size (int, None): If None, use default buffer. If int, use the buffer_size as buffer. 
+        
+        Returns:
+            BufferedInputStream Object   
+        """
+        assert buffer_size % mmap.ALLOCATIONGRANULARITY == 0
+        self.filename = filename
+        self.is_open = False
+        self.file_handler = None
+        self.buffer_size = buffer_size
+        self.buffer = None
+        self.map_file = None
+        self.offset = 0
+        self.step_size = mmap.ALLOCATIONGRANULARITY
+        self.position = 0
+        self.file_size = os.path.getsize(self.filename)
+        self.remaining = self.file_size
+        self.eof = False
+        self.temp_line = None
+
+    def open(self):
+        """ 
+        Creates the File Handler with buffering=buffer_size for reading file.
+        
+        Returns:
+            self.file_handler (_io.FileIO): IO File Handler object returned by the open fuction.   
+        """
+        if not self.is_open:
+            # If buffer_size is not specified, use default buffering mechanism
+            self.file_handler = open(self.filename,'r+')
+            self.is_open = True
+            self.buffer = self.file_handler.buffer
+            self.allocate_memory()
+            return self.file_handler
+
+    def allocate_memory(self):
+        if self.remaining > 0:
+            if self.map_file is not None:
+                self.map_file.flush()
+            self.map_file = mmap.mmap(self.file_handler.fileno(), self.buffer_size, access=mmap.ACCESS_READ, offset=self.offset)
+            self.remaining -= self.buffer_size
+            self.position = 0
+            self.offset += self.step_size
+            return True
+        return False
+
+    def read_line(self):
+        if self.position >= self.buffer_size:
+            if self.allocate_memory():    
+                line = self.map_file.readline()
+                if self.temp_line is not None:
+                    line = self.temp_line + line
+                    self.temp_line = None 
+                self.position += len(line)
+            else:
+                self.eof = True
+                line = ''
+        else:
+            line = self.map_file.readline()
+            self.position += len(line)
+            if line[-1] != 10:
+                self.temp_line = line
+                line = b''
+        return line
+
+    def seek(self, pos):
+        """ 
+        Seeks or moves the file reading pointer to a pos postion in the file.
+        
+        Parameters:
+            pos (int): position to seek to, specified as integer
+            absolute (bool): False moves the pointer pos steps from the current position,
+                             True moves the pointer to the absolute pos position.
+        Returns:
+            seek_pos (int): Current seek position after moving.   
+        """
+        return self.map_file.seek(seek_pos)
+
+
+    def end_of_stream(self):
+        """ 
+        Returns a boolean to indicate the end of stream.
+        
+        Returns:
+            boolean (bool): Boolean to indicate the end of file stream.   
+        """
+        return self.eof
+        # if self.read_byte():
+        #     self.seek(-1, False)
+        #     return False
+        # return True
+
+
+    def close(self):
+        """ 
+        Close the filestream object, raises exception if file is already closed.   
+        """
+        if self.is_open:
+            self.is_open = False
+            self.map_file.flush()
+            self.map_file.close()
+            self.file_handler.close()
+        else:
+            raise Exception("Cannot close a closed File")
+
 class OutputStream:
     def  __init__(self,filename):
         self.filename = filename
@@ -247,11 +361,7 @@ class OutputStream:
         """ 
         Close the filestream object, raises exception if file is already closed.   
         """
-        if self.is_open:
-            self.is_open = False
-            self.file_handler.close()
-        else:
-            raise Exception("Cannot close a closed File")
+        self.file_handler.close()
 
 class BufferedOutputStream:
     def  __init__(self, filename, buffer_size = None):
@@ -279,8 +389,45 @@ class BufferedOutputStream:
         """ 
         Close the filestream object, raises exception if file is already closed.   
         """
-        if self.is_open:
-            self.is_open = False
-            self.file_handler.close()
-        else:
-            raise Exception("Cannot close a closed File")
+        self.file_handler.close()
+
+
+class MemMappedOutputStream:
+    def  __init__(self, filename, buffer_size):
+        assert buffer_size % mmap.ALLOCATIONGRANULARITY == 0
+        self.filename = filename
+        self.file_handler = None
+        self.buffer_size = buffer_size
+        self.map_file = None
+        self.position = 0
+        self.step_size = mmap.ALLOCATIONGRANULARITY
+        self.offset = 0
+        
+    def create(self):
+        self.file_handler = open(self.filename,'r+')
+        self.allocate_memory()
+        return self.file_handler
+
+    def allocate_memory(self):
+        if self.map_file is not None:
+            self.map_file.flush()
+        self.map_file = mmap.mmap(self.file_handler.fileno(), self.buffer_size, access=mmap.ACCESS_WRITE, offset=self.offset)
+        self.position = 0
+        self.offset += self.step_size
+
+    def write_line(self, string):
+        print(repr(string))
+        if self.position >= self.buffer_size:
+            self.allocate_memory()
+        self.map_file.flush()
+        self.map_file[self.position:self.position + len(string)] = string
+        return True
+
+    def close(self):
+        """ 
+        Close the filestream object, raises exception if file is already closed.   
+        """
+        self.map_file.flush()
+        self.map_file.close()
+        self.file_handler.close()
+        
