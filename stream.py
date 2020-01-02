@@ -416,7 +416,6 @@ class MemMappedOutputStream:
         self.offset += self.step_size
 
     def write_line(self, string):
-        print(repr(string))
         if self.position >= self.buffer_size:
             self.allocate_memory()
         self.map_file.flush()
