@@ -2,7 +2,7 @@ import os
 import time
 import random
 
-from stream import ByteInputStream, BufferedInputStream
+from stream import ByteInputStream, BufferedInputStream, BufferedOutputStream
         
 def file_length_byte_stream(filename):
     sum = 0
@@ -16,7 +16,7 @@ def file_length_byte_stream(filename):
     return sum, end_time - start_time
 
 
-def file_length_buffered_stream(filename, buffer_size=None):
+def file_length_buffered_stream(filename, buffer_size = None):
     sum = 0
     input_stream = BufferedInputStream(filename, buffer_size)
     input_stream.open()
@@ -55,8 +55,49 @@ def rand_jump_buffered_stream(filename, j, buffer_size=None):
     end_time = time.time()
     return sum, end_time - start_time
 
+
+def rrmerge(files_list, target_file):
+    assert isinstance(files_list, list)
+    input_streams = []
+    
+    for filename in files_list:
+        input_stream = BufferedInputStream(filename)
+        input_stream.open()
+        input_streams.append(input_stream)
+
+    output_stream = BufferedOutputStream(target_file)
+    output_stream.create()
+    
+    total_streams = len(input_streams)
+    count = 0
+    while True:
+        for i_stream in input_streams:
+            line = i_stream.read_line()
+            output_stream.write_line(line)
+
+            if i_stream.end_of_stream():
+                i_stream.close()
+                input_streams.remove(i_stream)
+        count += 1
+        if count % 1000 == 0:
+            print(f"Lines Written: {count}\tStreams in progress: {len(input_streams)}/{total_streams}")
+
+        if not len(input_streams):
+            break
+    print('Merged Files')
+
+
+
+
 # TEST CODE
 FILE_NAME = 'data/company_name.csv'
+file_names = os.listdir('data')
+
+files_list = [os.path.join('data', x) for x in file_names if '.csv' in x and x[0] != '.']
+print(files_list)
+target_file = 'test.csv'
+rrmerge(files_list, target_file)
+assert False
 # Sequential Reading using Different Read Streams
 print("Exp 1.1: SEQUENTIAL READING...")
 file_sum, time_taken = file_length_byte_stream(FILE_NAME)

@@ -2,6 +2,8 @@ __author__ = "Haroon Rashid"
 __email__ = "haroon.rashid235@gmail.com"
 
 
+import os
+
 class ByteInputStream:
     def __init__(self, filename):
         """ 
@@ -172,7 +174,12 @@ class BufferedInputStream:
         for line in self.buffer:
             yield line
         # return next(self.buffer)
-        # return self.file_handler.readline()    
+        # return self.file_handler.readline()  
+
+    def read_line(self):
+        return self.file_handler.readline()
+        # return next(self.buffer).decode('utf-8')
+
 
 
     def seek(self, pos, absolute = True):
@@ -266,7 +273,7 @@ class BufferedOutputStream:
         return self.file_handler
 
     def write_line(self, string):
-        return self.file_handler.write(string + '\n')
+        return self.file_handler.write(string)
 
     def close(self):
         """ 
