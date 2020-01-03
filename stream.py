@@ -181,8 +181,12 @@ class BufferedInputStream:
         # return self.file_handler.readline()  
 
     def read_line(self):
-        # return self.file_handler.readline()
-        return next(self.buffer)#.decode('utf-8')
+        try:
+            line = self.file_handler.readline()
+        except:
+            line = ''
+        return line
+        # return next(self.buffer)#.decode('utf-8')
 
 
     def seek(self, pos, absolute = True):
@@ -302,7 +306,7 @@ class MemMappedInputStream:
         else:
             line = self.map_file.readline()
             self.position += len(line)
-            if line[-1] != 10:
+            if line != b'' and line[-1] != 10:
                 self.temp_line = line
                 line = b''
         return line
@@ -319,19 +323,14 @@ class MemMappedInputStream:
             seek_pos (int): Current seek position after moving.   
         """
         # If the seek position is beyond the currently mapped part of file
-        if pos > self.offset:
-            while self.offset < pos:
-                self.offset += self.step_size
-            self.offset -= self.step_size
-            self.allocate_memory()
-
-        elif pos < self.offset - self.step_size:
-            while self.offset > pos:
-                self.offset -= self.step_size
-            self.allocate_memory()
-
-        seek_pos = pos - (self.offset - self.step_size)
-        return self.map_file.seek(seek_pos)
+        multiplier = int(pos / self.step_size)
+        self.offset = self.step_size * multiplier
+        self.allocate_memory()
+        seek_pos = abs(pos - (self.offset - self.step_size))
+        try:
+            self.map_file.seek(seek_pos)
+        except:
+            return
 
 
     def end_of_stream(self):
@@ -424,7 +423,7 @@ class MemMappedOutputStream:
         self.offset = 0
         
     def create(self):
-        self.file_handler = open(self.filename,'r+')
+        self.file_handler = open(self.filename,'w')
         self.allocate_memory()
         return self.file_handler
 

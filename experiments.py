@@ -1,7 +1,9 @@
 from programs import file_length_byte_stream, file_length_buffered_stream, file_length_mmap_stream
 from programs import rand_jump_byte_stream, rand_jump_buffered_stream, rand_jump_mmap_stream
+from programs import rrmerge
 
 import os
+import time
 
 
 def benchmark_sequential_reading(stream_type, filename, buffer_size = None, times=5):
@@ -66,3 +68,23 @@ def benchmark_random_reading(stream_type, filename, j = 10000, buffer_size = Non
             total_time += time_taken
         avg_time = total_time / times
         return file_sum, avg_time
+
+
+def benchmark_combined_read_write(read_stream, write_stream, files_list, target_folder, buffer_size=8192, times=5):
+    assert isinstance(files_list, list)
+    assert read_stream in ['byte','buffer','mmap']
+    assert write_stream in ['byte','buffer','mmap']
+
+    os.makedirs(target_folder, exist_ok=True)
+    total_time = 0
+    for i in range(times):
+        target_file = os.path.join(target_folder, f'{i}.csv')
+        start_time = time.time()
+        rrmerge(files_list, target_file, read_stream, write_stream, buffer_size)
+        end_time = time.time()
+        total_time += end_time - start_time
+    return total_time / times
+
+
+
+
