@@ -1,95 +1,64 @@
 import os
-import time
-import random
+import mmap
 
-from stream import ByteInputStream, BufferedInputStream, BufferedOutputStream, MemMappedInputStream, MemMappedOutputStream
-        
-def file_length_byte_stream(filename):
-    sum = 0
-    input_stream = ByteInputStream(filename)
-    input_stream.open()
-    print(f"\nByte Stream: {filename}")
-    start_time = time.time()
-    while not input_stream.end_of_stream():
-        sum += len(input_stream.read_line())
-    end_time = time.time()
-    return sum, end_time - start_time
+from programs import file_length_byte_stream, file_length_buffered_stream
+from programs import rand_jump_byte_stream, rand_jump_buffered_stream   
+import experiments 
 
+data_folder = 'data'
+FILE_NAME = 'data/company_name.csv'
+NUM_TIMES = 5
+buffer_sizes = [None, 4096*2, 4096*3, 4096*4]
+data_files = os.listdir(data_folder)
 
-def file_length_buffered_stream(filename, buffer_size = None):
-    sum = 0
-    input_stream = BufferedInputStream(filename, buffer_size)
-    input_stream.open()
-    print(f"\nBuffered Stream: {filename}\t Buffer Size: {buffer_size}")
-    start_time = time.time()
-    for line in input_stream.read_lines():
-        sum += len(line)
-    end_time = time.time()
-    return sum, end_time - start_time
+test_files = []
+for file in data_files:
+    file_path = os.path.join(data_folder, file)
+    file_size = os.path.getsize(file_path)
+    test_files.append((file_path, file_size))
 
-def rand_jump_byte_stream(filename, j, buffer_size=None):
-    file_size = os.path.getsize(filename)
-    input_stream = ByteInputStream(filename)
-    input_stream.open()
-    sum = 0
-    start_time = time.time()
-    print(f"\nByte Stream: {filename}\t Jumps: {j}")
-    for i in range(j):
-        p = random.randint(1,file_size)
-        input_stream.seek(p)
-        sum += len(input_stream.read_line())
-    end_time = time.time()
-    return sum, end_time - start_time
+test_files.sort(key = lambda x:x[1])
 
-def rand_jump_buffered_stream(filename, j, buffer_size=None):
-    file_size = os.path.getsize(filename)
-    input_stream = BufferedInputStream(filename, buffer_size)
-    input_stream.open()
-    sum = 0
-    start_time = time.time()
-    print(f"\nBuffered Stream: {filename}\tJumps: {j}\tBuffer Size: {buffer_size}")
-    for i in range(j):
-        p = random.randint(1,file_size)
-        input_stream.seek(p)
-        sum += len(next(input_stream.read_lines()))
-    end_time = time.time()
-    return sum, end_time - start_time
+# Sequential Reading using Different Read Streams
+print("Exp 1.1: SEQUENTIAL READING...")
+file_sum, avg_time = experiments.benchmark_sequential_reading(stream_type='byte', filename=FILE_NAME, times=NUM_TIMES)
+print(f"File Length: {file_sum}\t\tAvg Time {round(avg_time * 1000,4)}ms")
+
+for buffer_size in buffer_sizes:
+    file_sum, avg_time = experiments.benchmark_sequential_reading(stream_type='buffer', 
+        filename=FILE_NAME, buffer_size=buffer_size, times=NUM_TIMES)
+    print(f"File Length: {file_sum}\t\tAvg Time {round(avg_time * 1000,4)}ms")
 
 
-def rrmerge(files_list, target_file):
-    assert isinstance(files_list, list)
-    input_streams = []
-    
-    for filename in files_list:
-        input_stream = BufferedInputStream(filename)
-        input_stream.open()
-        input_streams.append(input_stream)
+for buffer_size in buffer_sizes:
+    if buffer_size is None:
+        continue
+    file_sum, avg_time = experiments.benchmark_sequential_reading(stream_type='mmap', 
+        filename=FILE_NAME, buffer_size=buffer_size, times=NUM_TIMES)
+    print(f"File Length: {file_sum}\t\tAvg Time {round(avg_time * 1000,4)}ms")
 
-    output_stream = BufferedOutputStream(target_file)
-    output_stream.create()
-    
-    total_streams = len(input_streams)
-    count = 0
-    while True:
-        for i_stream in input_streams:
-            line = i_stream.read_line()
-            output_stream.write_line(line)
+# Random Reading using Different Read Streams
+print("\n\nExp 1.2: RANDOM READING...")
 
-            if i_stream.end_of_stream():
-                i_stream.close()
-                input_streams.remove(i_stream)
-        count += 1
-        if count % 1000 == 0:
-            print(f"Lines Written: {count}\tStreams in progress: {len(input_streams)}/{total_streams}")
+# Benchmark Byte Stream
+file_sum, avg_time = experiments.benchmark_random_reading(stream_type='byte', j=1000, filename=FILE_NAME, times=NUM_TIMES)
+print(f"File Length: {file_sum}\t\tAvg Time {round(avg_time * 1000,4)}ms")
 
-        if not len(input_streams):
-            break
-    output_stream.close()
-    print('Merged Files...')
+# Benchmark Buffered Stream
+for buffer_size in buffer_sizes:
+    file_sum, avg_time = experiments.benchmark_random_reading(stream_type='buffer', 
+        filename=FILE_NAME, j=1000, buffer_size=buffer_size, times=NUM_TIMES)
+    print(f"File Length: {file_sum}\t\tAvg Time {round(avg_time * 1000,4)}ms")
 
+# Benchmark MemMapped Stream
+for buffer_size in buffer_sizes:
+    if buffer_size is None:
+        continue
+    file_sum, avg_time = experiments.benchmark_random_reading(stream_type='mmap', 
+        filename=FILE_NAME, j=1000, buffer_size=buffer_size, times=NUM_TIMES)
+    print(f"File Length: {file_sum}\t\tAvg Time {round(avg_time * 1000,4)}ms")
 
 # TEST CODE
-FILE_NAME = 'data/company_name.csv'
 file_names = os.listdir('data')
 
 files_list = [os.path.join('data', x) for x in file_names if '.csv' in x and x[0] != '.']
@@ -97,38 +66,3 @@ files_list = [os.path.join('data', x) for x in file_names if '.csv' in x and x[0
 # target_file = 'test.csv'
 # rrmerge(files_list, target_file)
 # assert False
-# Sequential Reading using Different Read Streams
-
-
-print("Exp 1.1: SEQUENTIAL READING...")
-file_sum, time_taken = file_length_byte_stream(FILE_NAME)
-print(f"File Length: {file_sum}\t\tTime {round(time_taken * 1000,4)}ms")
-file_sum, time_taken = file_length_buffered_stream(FILE_NAME)
-print(f"File Length: {file_sum}\t\tTime {round(time_taken * 1000,4)}ms")
-file_sum, time_taken = file_length_buffered_stream(FILE_NAME,buffer_size=5)
-print(f"File Length: {file_sum}\t\tTime {round(time_taken * 1000,4)}ms")
-file_sum, time_taken = file_length_buffered_stream(FILE_NAME,buffer_size=50)
-print(f"File Length: {file_sum}\t\tTime {round(time_taken * 1000,4)}ms")
-file_sum, time_taken = file_length_buffered_stream(FILE_NAME,buffer_size=500)
-print(f"File Length: {file_sum}\t\tTime {round(time_taken * 1000,4)}ms")
-file_sum, time_taken = file_length_buffered_stream(FILE_NAME,buffer_size=5000)
-print(f"File Length: {file_sum}\t\tTime {round(time_taken * 1000,4)}ms")
-
-
-
-# Random Reading using Different Read Streams
-print("\nExp 1.2: RANDOM READING...")
-file_sum, time_taken = rand_jump_byte_stream(FILE_NAME, 10000)
-print(f"File Length: {file_sum}\t\tTime {round(time_taken * 1000,4)}ms")
-file_sum, time_taken = rand_jump_buffered_stream(FILE_NAME, j=10000)
-print(f"File Length: {file_sum}\t\tTime {round(time_taken * 1000,4)}ms")
-file_sum, time_taken = rand_jump_buffered_stream(FILE_NAME,j=10000, buffer_size=5)
-print(f"File Length: {file_sum}\t\tTime {round(time_taken * 1000,4)}ms")
-file_sum, time_taken = rand_jump_buffered_stream(FILE_NAME,j=10000, buffer_size=50)
-print(f"File Length: {file_sum}\t\tTime {round(time_taken * 1000,4)}ms")
-file_sum, time_taken = rand_jump_buffered_stream(FILE_NAME,j=10000, buffer_size=500)
-print(f"File Length: {file_sum}\t\tTime {round(time_taken * 1000,4)}ms")
-file_sum, time_taken = rand_jump_buffered_stream(FILE_NAME,j=10000, buffer_size= 5000)
-print(f"File Length: {file_sum}\t\tTime {round(time_taken * 1000,4)}ms")
-
-

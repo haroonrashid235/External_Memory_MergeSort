@@ -61,20 +61,22 @@ class ByteInputStream:
             line = []
             raw_byte = self.read_byte()
             while raw_byte:
-                try:
-                    # decode bytes to string using utf-8 decoding
-                    char = raw_byte.decode('utf-8')
-                # Check for UnicodeDecode Exceptions
-                except UnicodeDecodeError:
-                    raw_byte = self.read_byte()
-                    continue
-                line.append(char)
+                # try:
+                #     # decode bytes to string using utf-8 decoding
+                #     char = raw_byte
+                # # Check for UnicodeDecode Exceptions
+                # except UnicodeDecodeError:
+                #     raw_byte = self.read_byte()
+                #     continue
+                line.append(raw_byte)
                 raw_byte = self.read_byte()
 
                 # Line reading is completed at this new-line delimeter
                 if raw_byte == b'\n':
+                    line.append(raw_byte)
                     break
-            return "".join(line)
+            # print(b"".join(line), line[0])
+            return b''.join(line)
         else:
             raise ValueError("I/O operation on closed file.")
 
@@ -179,8 +181,8 @@ class BufferedInputStream:
         # return self.file_handler.readline()  
 
     def read_line(self):
-        return self.file_handler.readline()
-        # return next(self.buffer).decode('utf-8')
+        # return self.file_handler.readline()
+        return next(self.buffer)#.decode('utf-8')
 
 
     def seek(self, pos, absolute = True):
@@ -274,6 +276,11 @@ class MemMappedInputStream:
         if self.remaining > 0:
             if self.map_file is not None:
                 self.map_file.flush()
+            
+            # If reading the last portion of the file, map only the left-over part of the filename
+            if self.file_size - self.offset < self.buffer_size:
+                self.buffer_size = self.file_size - self.offset
+            
             self.map_file = mmap.mmap(self.file_handler.fileno(), self.buffer_size, access=mmap.ACCESS_READ, offset=self.offset)
             self.remaining -= self.buffer_size
             self.position = 0
@@ -311,6 +318,19 @@ class MemMappedInputStream:
         Returns:
             seek_pos (int): Current seek position after moving.   
         """
+        # If the seek position is beyond the currently mapped part of file
+        if pos > self.offset:
+            while self.offset < pos:
+                self.offset += self.step_size
+            self.offset -= self.step_size
+            self.allocate_memory()
+
+        elif pos < self.offset - self.step_size:
+            while self.offset > pos:
+                self.offset -= self.step_size
+            self.allocate_memory()
+
+        seek_pos = pos - (self.offset - self.step_size)
         return self.map_file.seek(seek_pos)
 
 
