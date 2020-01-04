@@ -131,4 +131,6 @@ dmypy.json
 # data files
 data/
 output/
+temp/
 .csv
+
