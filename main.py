@@ -147,8 +147,8 @@ def run_experiment3():
                 f.write(str(files_list) + '\n')
 
 
-# run_experiment_1(test_files)
-# run_experiment_2(test_files)
+run_experiment_1(test_files)
+run_experiment_2(test_files)
 run_experiment3()
 
 

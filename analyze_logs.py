@@ -34,6 +34,7 @@ save_path = os.path.join(save_dir, 'exp1_sequential_reading.png')
 plt.savefig(save_path)
 print(f"plots saved in {save_path}")
 
+
 ## Analyze Random Reading Plots
 print('\nAnalyzing logs for Exp2: Random Reading')
 log_seq_files = [x for x in log_files if 'random' in x]
@@ -61,5 +62,3 @@ for jump in jumps:
     save_path = os.path.join(save_dir, f'exp2_random_reading_{jump}.png')
     plt.savefig(save_path)
     print(f"plots saved in {save_path}")
-    
-
