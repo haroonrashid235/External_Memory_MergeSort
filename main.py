@@ -130,22 +130,25 @@ def run_experiment3():
     io_pairs = [('buffer','byte'),('buffer','buffer'),('mmap','byte'),('mmap','buffer')]
     file_names = os.listdir('data')
     files_list = [os.path.join('data', x) for x in file_names if '.csv' in x and x[0] != '.']
+    files_list = [x for x,y in test_files if y < 1000000000]
+    
     target_folder = 'output'
     buffer_sizes = [8192, 12288, 16384]
-
+    files_list = files_list[:10]
     for pair in io_pairs:
         log_string = "read_stream,write_stream,num_files,buffer_size,avg_time\n"
         for buffer_size in buffer_sizes:
-            avg_time = experiments.benchmark_combined_read_write(pair[0], pair[1], files_list, target_folder, buffer_size=8192, times=1)
+            avg_time = experiments.benchmark_combined_read_write(pair[0], pair[1], files_list, target_folder, buffer_size=buffer_size, times=1)
             print(f"Pair: {pair}\tAvg Time {round(avg_time * 1000,4)}ms")
             log_string += f"{pair[0]},{pair[1]},{len(files_list)},{buffer_size},{round(avg_time * 1000,4)}\n"
         log_file_name = os.path.join(log_folder, f"log_rrmerge_{pair[0]}_{pair[1]}.csv")
         with open(log_file_name, 'w') as f:
                 f.write(log_string)
+                f.write(str(files_list) + '\n')
 
 
-run_experiment_1(test_files)
-run_experiment_2(test_files)
+# run_experiment_1(test_files)
+# run_experiment_2(test_files)
 run_experiment3()
 
 

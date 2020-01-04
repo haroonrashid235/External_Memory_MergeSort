@@ -156,10 +156,10 @@ class BufferedInputStream:
         if not self.is_open:
             # If buffer_size is not specified, use default buffering mechanism
             if self.buffer_size is None:
-                self.file_handler = open(self.filename,'r')
+                self.file_handler = open(self.filename,'r', encoding='utf-8')
             else:
                 # Use buffering specified by the buffer_size 
-                self.file_handler = open(self.filename,'r', buffering = self.buffer_size)
+                self.file_handler = open(self.filename,'r', buffering = self.buffer_size,encoding='utf-8')
             self.is_open = True
             # Get the reference to the buffer
             self.buffer = self.file_handler.buffer
@@ -181,12 +181,7 @@ class BufferedInputStream:
         # return self.file_handler.readline()  
 
     def read_line(self):
-        try:
-            line = self.file_handler.readline()
-        except:
-            line = ''
-        return line
-        # return next(self.buffer)#.decode('utf-8')
+        return next(self.buffer)#.decode('utf-8')
 
 
     def seek(self, pos, absolute = True):
@@ -402,6 +397,8 @@ class BufferedOutputStream:
         return self.file_handler
 
     def write_line(self, string):
+        if type(string) == bytes:
+            string = string.decode('utf-8')
         return self.file_handler.write(string)
 
     def close(self):

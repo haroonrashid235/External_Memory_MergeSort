@@ -1,4 +1,5 @@
 read_stream,write_stream,num_files,buffer_size,avg_time
-buffer,byte,19,8192,827750.7668
-buffer,byte,19,12288,823090.3685
-buffer,byte,19,16384,826075.8622
+buffer,byte,10,8192,23629.3132
+buffer,byte,10,12288,23745.0747
+buffer,byte,10,16384,24091.7599
+['data/comp_cast_type.csv', 'data/kind_type.csv', 'data/company_type.csv', 'data/link_type.csv', 'data/info_type.csv', 'data/movie_link.csv', 'data/complete_cast.csv', 'data/keyword.csv', 'data/company_name.csv', 'data/movie_info_idx.csv']
