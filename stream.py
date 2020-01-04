@@ -373,7 +373,7 @@ class OutputStream:
 
     def write_line(self, string):
         for char in string:
-            self.file_handler.write(char)
+            self.file_handler.write(str(char))
         return self.file_handler.write('\n')
 
     def close(self):

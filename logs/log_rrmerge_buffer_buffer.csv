@@ -1,0 +1,4 @@
+read_stream,write_stream,num_files,buffer_size,avg_time
+buffer,buffer,19,8192,140490.0382
+buffer,buffer,19,12288,145214.6118
+buffer,buffer,19,16384,149616.8385
