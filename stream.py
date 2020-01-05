@@ -181,6 +181,12 @@ class BufferedInputStream:
         # return self.file_handler.readline()  
 
     def read_line(self):
+        """ 
+        Reads and returns a line from a self.filename file strating at the current seek position.
+        
+        Returns:
+            line (str): Line of chars read from the file as string.   
+        """
         return next(self.buffer)#.decode('utf-8')
 
 
@@ -232,33 +238,35 @@ class MemMappedInputStream:
     
     def __init__(self, filename, buffer_size):
         """ 
-        Creates the BufferedInputStream Object to read file using main memory buffers.
+        Creates the MemMappedInputStream Object to read file using main memory buffers.
         
         Parameters:
             filename (string): path to the file to read
             buffer_size (int, None): If None, use default buffer. If int, use the buffer_size as buffer. 
         
         Returns:
-            BufferedInputStream Object   
+            MemMappedInputStream Object   
         """
+        # Makes sure that buffer size is a multiple of page_size
         assert buffer_size % mmap.ALLOCATIONGRANULARITY == 0
         self.filename = filename
         self.is_open = False
         self.file_handler = None
         self.buffer_size = buffer_size
         self.buffer = None
-        self.map_file = None
-        self.offset = 0
-        self.step_size = mmap.ALLOCATIONGRANULARITY
-        self.position = 0
-        self.file_size = os.path.getsize(self.filename)
-        self.remaining = self.file_size
-        self.eof = False
-        self.temp_line = None
+        self.map_file = None # map file boject from mmap library
+        self.offset = 0      # Keeps track of the offset to use when mapping file
+        self.step_size = mmap.ALLOCATIONGRANULARITY # Step size allowed in python
+        self.position = 0    # postiion of the file globally, seek only seeks on the currently mapped file part.
+        self.file_size = os.path.getsize(self.filename) # size of the file
+        self.remaining = self.file_size # remaining portion to be read
+        self.eof = False # bool to indicate the end of the file
+        self.temp_line = None # stores partial line, if it exceeds the mapped part
 
     def open(self):
         """ 
-        Creates the File Handler with buffering=buffer_size for reading file.
+        Creates the File Handler with buffering=buffer_size for reading file, 
+        and maps the file in memory from index 0 to the buffer_size.
         
         Returns:
             self.file_handler (_io.FileIO): IO File Handler object returned by the open fuction.   
@@ -268,10 +276,14 @@ class MemMappedInputStream:
             self.file_handler = open(self.filename,'r+')
             self.is_open = True
             self.buffer = self.file_handler.buffer
+            # map the file to the memory
             self.allocate_memory()
             return self.file_handler
 
     def allocate_memory(self):
+        """ 
+        Maps the B bytes of the file to the main memory starting at the offset postion , 
+        """
         if self.remaining > 0:
             if self.map_file is not None:
                 self.map_file.flush()
@@ -288,6 +300,15 @@ class MemMappedInputStream:
         return False
 
     def read_line(self):
+        """ 
+        Reads and returns a line from a self.filename file strating at the current seek position.
+        
+        Returns:
+            line (str): Line of chars read from the file as string.   
+        """
+
+        # If global seek position exceeds the mapped part of the file, reallocate the memory
+        # until the complete line has been read
         if self.position >= self.buffer_size:
             if self.allocate_memory():    
                 line = self.map_file.readline()
@@ -301,10 +322,12 @@ class MemMappedInputStream:
         else:
             line = self.map_file.readline()
             self.position += len(line)
+            # If its not the end of file and last char is not a \n character, then save the line and reallocate the memory
             if line != b'' and line[-1] != 10:
                 self.temp_line = line
                 line = b''
         return line
+
 
     def seek(self, pos):
         """ 
@@ -312,8 +335,6 @@ class MemMappedInputStream:
         
         Parameters:
             pos (int): position to seek to, specified as integer
-            absolute (bool): False moves the pointer pos steps from the current position,
-                             True moves the pointer to the absolute pos position.
         Returns:
             seek_pos (int): Current seek position after moving.   
         """
@@ -355,7 +376,17 @@ class MemMappedInputStream:
             raise Exception("Cannot close a closed File")
 
 class OutputStream:
+    
     def  __init__(self,filename):
+        """ 
+        Creates the OutputStream Object to read file using main memory buffers.
+        
+        Parameters:
+            filename (string): path to the file to read
+        
+        Returns:
+            OutputStream Object   
+        """
         self.filename = filename
         self.file_handler = None
 
@@ -367,6 +398,12 @@ class OutputStream:
         return self.file_handler
 
     def write_line(self, string):
+        """ 
+        Writes a linee byte by byte strating at the current seek position.
+        
+        Returns:
+            self.file_handler.write (bool): True to indicate a successful write, false otherwise.   
+        """
         for char in string:
             self.file_handler.write(str(char))
         return self.file_handler.write('\n')
@@ -379,6 +416,16 @@ class OutputStream:
 
 class BufferedOutputStream:
     def  __init__(self, filename, buffer_size = None):
+        """ 
+        Creates the BufferedOutputStream Object to read file using main memory buffers.
+        
+        Parameters:
+            filename (string): path to the file to read
+            buffer_size (int, None): If None, use default buffer. If int, use the buffer_size as buffer. 
+        
+        Returns:
+            BufferedOutputStream Object   
+        """
         self.filename = filename
         self.file_handler = None
         self.buffer_size = buffer_size
@@ -403,13 +450,23 @@ class BufferedOutputStream:
 
     def close(self):
         """ 
-        Close the filestream object, raises exception if file is already closed.   
+        Close the filestream object   
         """
         self.file_handler.close()
 
 
 class MemMappedOutputStream:
     def  __init__(self, filename, buffer_size):
+        """ 
+        Creates the MemMappedOutputStream Object to read file using main memory buffers.
+        
+        Parameters:
+            filename (string): path to the file to read
+            buffer_size (int, None): If None, use default buffer. If int, use the buffer_size as buffer. 
+        
+        Returns:
+            MemMappedOutputStream Object   
+        """
         assert buffer_size % mmap.ALLOCATIONGRANULARITY == 0
         self.filename = filename
         self.file_handler = None
@@ -425,6 +482,9 @@ class MemMappedOutputStream:
         return self.file_handler
 
     def allocate_memory(self):
+        """ 
+        Maps the B bytes of the file to the main memory starting at the offset postion , 
+        """
         if self.map_file is not None:
             self.map_file.flush()
         self.map_file = mmap.mmap(self.file_handler.fileno(), self.buffer_size, access=mmap.ACCESS_WRITE, offset=self.offset)
@@ -440,7 +500,7 @@ class MemMappedOutputStream:
 
     def close(self):
         """ 
-        Close the filestream object, raises exception if file is already closed.   
+        Close the filestream object and flush the buffers.   
         """
         self.map_file.flush()
         self.map_file.close()
